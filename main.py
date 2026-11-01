@@ -1,3 +1,5 @@
+import argparse
+import api_handler
 import config
 import plotter
 import simulator
@@ -26,24 +28,71 @@ def compute_regime_percentages(regime_labels):
     return percentages
 
 
-def main():
-    """Executes default mode simulation, outputs percentages, and generates plot."""
-    # 1. Generate stimulus list
-    stimulus = make_default_stimulus()
+def parse_arguments():
+    """Parses command line arguments for the simulator CLI."""
+    parser = argparse.ArgumentParser(
+        description="Homeostatic Drive Simulator CLI"
+    )
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        help="Name of scenario (e.g., 'noisy_workday', 'relax')",
+    )
+    parser.add_argument(
+        "--level",
+        type=str,
+        choices=["none", "low", "medium", "high", "extreme"],
+        help="Override stimulus level across burst phase",
+    )
+    parser.add_argument(
+        "--mock",
+        action="store_true",
+        help="Force local mock scenario generation",
+    )
+    return parser.parse_args()
 
-    # 2. Run core simulation
+
+def main():
+    """Main CLI entry point for the simulation tool."""
+    args = parse_arguments()
+
+    if args.scenario:
+        print(f"--- Running Scenario Mode: '{args.scenario}' ---")
+        scenario_data = api_handler.fetch_scenario_stimulus(
+            args.scenario, use_mock=args.mock
+        )
+        stimulus = scenario_data["stimulus"]
+        print(f"Description: {scenario_data.get('description', 'N/A')}")
+
+        # Apply level override if specified by user
+        if args.level:
+            override_val = config.LEVEL_TO_STIMULUS[args.level]
+            print(
+                f"Applying custom level override: '{args.level}' ({override_val})"
+            )
+            for i in range(len(stimulus)):
+                if stimulus[i] > 0.0:
+                    stimulus[i] = override_val
+    else:
+        print("--- Running Default Baseline Mode ---")
+        stimulus = make_default_stimulus()
+
+    # Run simulation physics engine
     drives, regimes, valences, arousals = simulator.run_simulation(stimulus)
 
-    # 3. Compute regime percentages
+    # Compute and display percentages
     percentages = compute_regime_percentages(regimes)
-
-    # Print terminal output
-    print("--- Simulation Summary ---")
+    print("\n--- Regime Breakdown ---")
     for regime, pct in percentages.items():
         print(f"{regime.capitalize()}: {pct}%")
 
-    # 4. Generate 3-panel plot
-    plotter.generate_plots(drives, regimes, valences, arousals)
+    # Generate visual plot output
+    plot_name = (
+        f"plot_{args.scenario}.png" if args.scenario else "drive_plot.png"
+    )
+    plotter.generate_plots(
+        drives, regimes, valences, arousals, filename=plot_name
+    )
 
 
 if __name__ == "__main__":
