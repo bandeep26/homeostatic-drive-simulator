@@ -6,12 +6,12 @@ import simulator
 
 
 def make_default_stimulus():
-    """Generates a default 300-step stimulus list covering all 3 regimes."""
+    """Generates a default 300-step stimulus list covering baseline homeostatic response."""
     stimulus = [0.0] * config.TOTAL_STEPS
 
-    # Noisy burst: steps 40 to 119
+    # Default burst: steps 40 to 119 using config medium stimulus level
     for i in range(40, 120):
-        stimulus[i] = 0.012
+        stimulus[i] = config.LEVEL_TO_STIMULUS["medium"]
 
     return stimulus
 
@@ -23,7 +23,7 @@ def compute_regime_percentages(regime_labels):
 
     for regime in ["homeostatic", "overwhelmed", "under-stimulated"]:
         count = regime_labels.count(regime)
-        percentages[regime] = round((count / total_steps) * 100, 2)
+        percentages[regime] = round((count / total_steps) * 100, 1)
 
     return percentages
 
@@ -36,7 +36,7 @@ def parse_arguments():
     parser.add_argument(
         "--scenario",
         type=str,
-        help="Name of scenario (e.g., 'noisy_workday', 'relax')",
+        help="Name of scenario (e.g., 'robot in a gym', 'robot in a museum')",
     )
     parser.add_argument(
         "--level",
@@ -47,7 +47,7 @@ def parse_arguments():
     parser.add_argument(
         "--mock",
         action="store_true",
-        help="Force local mock scenario generation",
+        help="Force local mock scenario generation without live REST API calls",
     )
     return parser.parse_args()
 
