@@ -2,3 +2,6 @@ venv/
 __pycache__/
 *.pyc
 .env
+# Local study documentation
+*.pdf
+document_*.md
